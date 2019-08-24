@@ -2,19 +2,19 @@ def valid_string(val: str) -> bool:
     """ just string length check """
     return True if len(val) > 0 else False
 
-def vmw_deploy_get_cert_cn(cert) -> str:
+def get_cert_cn(cert) -> str:
     try:
         return cert.get_subject().CN
     except:
         return 123  # ERROR_INVALID_NAME
 
-def vmw_deploy_valid_fqdnIp(cert, fqdn_ip: str) -> int:
+def valid_fqdnIp(cert, fqdn_ip: str) -> int:
 
     san_vals = parse_vals(cert)
     if any(san_vals == err for err in [87, 123]):
         return san_vals
 
-    if vmw_deploy_is_ip_address(fqdn_ip):
+    if is_ip_address(fqdn_ip):
         ip_addresses_from_san = san_vals[1]
 
         if all(fqdn_ip != x for x in ip_addresses_from_san):
@@ -28,14 +28,14 @@ def vmw_deploy_valid_fqdnIp(cert, fqdn_ip: str) -> int:
 
     else:
         if len(san_vals[2]) == 0:
-            if vmw_deploy_get_cert_cn(cert) != fqdn_ip:
+            if get_cert_cn(cert) != fqdn_ip:
                 return 80007  # CERTIFICATE_ERROR_DNS_DOES_NOT_MATCH_CN
             else:
                 return 80003  # CERTIFICATE_ERROR_DNS_NOT_IN_SAN
         else:
             return 0
 
-def vmw_deploy_validate_x509(cert, fqdn_ip: str) -> int:
+def validate_x509(cert, fqdn_ip: str) -> int:
     """ fqdn and certificate expiry checks """
 
     # not_before check
@@ -50,21 +50,21 @@ def vmw_deploy_validate_x509(cert, fqdn_ip: str) -> int:
     if cert.has_expired():
         return 8006  # CERTIFICATE_ERROR_DATE_EXPIRED
 
-    return vmw_deploy_valid_fqdnIp(cert, fqdn_ip)
+    return valid_fqdnIp(cert, fqdn_ip)
 
-def deploy_validate_cert_file(file_name: str, fqdn_ip: str) -> int:
+def validate_cert_file(file_name: str, fqdn_ip: str) -> int:
     """ Based on date, time and fqdn """
     cert = get_x509_from_file(file_name)
     if any(cert == x for x in [1006, 2]):
         return cert
 
-    return vmw_deploy_validate_x509(cert, fqdn_ip)
+    return validate_x509(cert, fqdn_ip)
 
 def get_fqdn(certificate) -> str:
     fqdn_ip = certificate.get_subject().O
     return fqdn_ip
 
-def vmw_deploy_is_ip_address(addr: str) -> bool:
+def is_ip_address(addr: str) -> bool:
     """ Return bool for both ipv4 and ipv6 """
     if not valid_string(addr):
         return False
@@ -106,7 +106,7 @@ def get_cert_san(cert):
 
 def check_for_ip_addr(san):
     """ return list of strings that can be IP """
-    ip_addr = filter(vmw_deploy_is_ip_address, san)
+    ip_addr = filter(is_ip_address, san)
     return ip_addr
 
 def check_for_dns(san):
@@ -118,7 +118,7 @@ def check_for_dns(san):
 def parse_vals(cert):
     """ Return list containing CN, list of IP addresses, DNS names """
 
-    cert_cn = vmw_deploy_get_cert_cn(cert)
+    cert_cn = get_cert_cn(cert)
     if cert_cn == 123:  # ERROR_INVALID_NAME
         return 123
 
